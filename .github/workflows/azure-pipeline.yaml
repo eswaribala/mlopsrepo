@@ -1,21 +1,28 @@
-trigger:
-- main
+name: Loan MLOps Pipeline
 
-pool:
-  vmImage: ubuntu-latest
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
-steps:
+jobs:
+  train-model:
+    runs-on: ubuntu-latest
 
-- task: UsePythonVersion@0
-  inputs:
-    versionSpec: '3.11'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-- script: |
-    pip install pandas
-    pip install scikit-learn==1.7.2
-    pip install joblib
-  displayName: Install Dependencies
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-- script: |
-    python src/azuremlapp/utils/train.py
-  displayName: Train Model
+      - name: Install dependencies
+        run: |
+          pip install pandas scikit-learn==1.7.2 joblib
+
+      - name: Run training
+        run: |
+          python src/azuremlapp/utils/train.py
