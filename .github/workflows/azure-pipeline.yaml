@@ -21,7 +21,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pandas scikit-learn==1.7.2 joblib
+          pip install pandas scikit-learn==1.7.2 joblib pydotenv
 
       - name: Run training
         run: |
