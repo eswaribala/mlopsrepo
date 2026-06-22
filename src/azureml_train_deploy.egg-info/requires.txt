@@ -1,0 +1,9 @@
+azure-ai-ml<2,>=1.24
+azure-identity<2,>=1.19
+joblib<2,>=1.4
+python-dotenv<2,>=1.0
+scikit-learn<2,>=1.5
+
+[dev]
+pytest<9,>=8
+ruff<1,>=0.9

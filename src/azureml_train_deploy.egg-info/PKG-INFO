@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: azureml-train-deploy
+Version: 0.1.0
+Summary: Train and deploy a scikit-learn model with Azure Machine Learning
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: azure-ai-ml<2,>=1.24
+Requires-Dist: azure-identity<2,>=1.19
+Requires-Dist: joblib<2,>=1.4
+Requires-Dist: python-dotenv<2,>=1.0
+Requires-Dist: scikit-learn<2,>=1.5
+Provides-Extra: dev
+Requires-Dist: pytest<9,>=8; extra == "dev"
+Requires-Dist: ruff<1,>=0.9; extra == "dev"

@@ -1,0 +1,7 @@
+pyproject.toml
+src/azureml_train_deploy.egg-info/PKG-INFO
+src/azureml_train_deploy.egg-info/SOURCES.txt
+src/azureml_train_deploy.egg-info/dependency_links.txt
+src/azureml_train_deploy.egg-info/requires.txt
+src/azureml_train_deploy.egg-info/top_level.txt
+src/azuremlapp/__init__.py

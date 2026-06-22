@@ -1,0 +1,15 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
+
+type: command
+display_name: train-loan-random-forest
+experiment_name: loan-approval-experiment
+
+code: ./src/azuremlapp
+
+command: python utils/train.py
+
+environment:
+  image: mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04
+  conda_file: conda.yml
+
+compute: azureml:cpu-cluster

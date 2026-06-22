@@ -1,0 +1,21 @@
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.11'
+
+- script: |
+    pip install pandas
+    pip install scikit-learn==1.7.2
+    pip install joblib
+  displayName: Install Dependencies
+
+- script: |
+    python src/azuremlapp/utils/train.py
+  displayName: Train Model
