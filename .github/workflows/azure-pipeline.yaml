@@ -144,8 +144,8 @@ jobs:
 
       - name: Create Test Batch Deployment
         run: |
-         az ml batch-deployment create \
-          --file batch-deployment.yml
+         az ml batch-deployment create 
+           --file batch-deployment.yml --resource-group training_group --workspace-name training-ws
 
       - name: Create Test Input CSV
         run: |
