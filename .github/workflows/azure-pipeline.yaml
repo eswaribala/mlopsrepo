@@ -144,18 +144,8 @@ jobs:
 
       - name: Create Test Batch Deployment
         run: |
-          az ml batch-deployment create \
-            --name $TEST_BATCH_DEPLOYMENT \
-            --endpoint-name $TEST_BATCH_ENDPOINT \
-            --model azureml:$MODEL_NAME:${{ needs.register-model.outputs.model_version }} \
-            --compute azureml:$COMPUTE_NAME \
-            --code-path src/azuremlapp/utils \
-            --scoring-script batch_score.py \
-            --environment azureml:AzureML-sklearn-1.0-ubuntu20.04-py38-cpu@latest \
-            --instance-count 1 \
-            --mini-batch-size 1 \
-            --max-concurrency-per-instance 1 \
-            --set-default
+         az ml batch-deployment create \
+          --file batch-deployment.yml
 
       - name: Create Test Input CSV
         run: |
@@ -215,7 +205,7 @@ jobs:
             --model azureml:$MODEL_NAME:${{ needs.register-model.outputs.model_version }} \
             --compute azureml:$COMPUTE_NAME \
             --code-path src/azuremlapp/utils \
-            --scoring-script batch_score.py \
+            --scoring-script score.py \
             --environment azureml:AzureML-sklearn-1.0-ubuntu20.04-py38-cpu@latest \
             --instance-count 1 \
             --mini-batch-size 1 \
