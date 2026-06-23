@@ -157,17 +157,24 @@ jobs:
           EOF
 
       - name: Upload Test Input Data
+        id: testdata
         run: |
-          az ml data create \
+          DATA_VERSION=$(az ml data create \
             --name loan-test-batch-input \
             --type uri_folder \
-            --path batch-input/
+            --path batch-input/ \
+            --query version \
+            --output tsv)
+
+          echo "data_version=$DATA_VERSION" >> $GITHUB_OUTPUT
 
       - name: Invoke Test Batch Endpoint
         run: |
-          az ml batch-endpoint invoke \
-            --name $TEST_BATCH_ENDPOINT \
-            --input azureml:loan-test-batch-input@latest
+            az ml batch-endpoint invoke \
+              --name $TEST_BATCH_ENDPOINT \
+              --input azureml:loan-test-batch-input:${{ steps.testdata.outputs.data_version }} \
+              --resource-group $RESOURCE_GROUP \
+              --workspace-name $WORKSPACE_NAME
 
   deploy-production-batch:
     needs:
