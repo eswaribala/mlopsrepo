@@ -63,3 +63,14 @@ az provider list  --query "[?namespace=='Microsoft.MachineLearningServices' || n
 
 #run scope.py
 az ml online-endpoint create --file endpoint.yml --resource-group training_group --workspace-name training-ws
+
+
+
+
+
+#github azure credentials
+az ad sp create-for-rbac  --name github-actions-sp --role Contributor 
+  --scopes /subscriptions/7d267e35-6fb2-4a8d-b9ce-c127545512c8 
+  --sdk-auth
+
+  
