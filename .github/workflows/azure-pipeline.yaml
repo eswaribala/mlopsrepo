@@ -1,4 +1,4 @@
-name: Loan Approval Azure ML MLOps Pipeline
+name: Loan Approval Azure ML Batch MLOps Pipeline
 
 on:
   push:
@@ -11,14 +11,13 @@ env:
   WORKSPACE_NAME: training-ws
   MODEL_NAME: loan-approval-modelv1
 
-  TEST_ENDPOINT: loan-test-endpoint
-  TEST_DEPLOYMENT: blue
+  TEST_BATCH_ENDPOINT: loan-test-batch-endpoint
+  TEST_BATCH_DEPLOYMENT: blue
 
-  PROD_ENDPOINT: loan-prod-endpoint
-  PROD_DEPLOYMENT: blue
+  PROD_BATCH_ENDPOINT: loan-prod-batch-endpoint
+  PROD_BATCH_DEPLOYMENT: blue
 
-  INSTANCE_TYPE: Standard_DS3_v2
-  INSTANCE_COUNT: 1
+  COMPUTE_NAME: cpu-cluster
 
 jobs:
   train-model:
@@ -74,7 +73,6 @@ jobs:
 
       - name: Validate Model Exists
         run: |
-          echo "Checking model file"
           test -f outputs/loan_model.pkl
           echo "Model validation passed"
 
@@ -103,6 +101,7 @@ jobs:
       - name: Install Azure ML Extension
         run: |
           az extension add -n ml --yes
+          az extension update -n ml
           az configure --defaults group=$RESOURCE_GROUP workspace=$WORKSPACE_NAME
 
       - name: Register Model
@@ -115,10 +114,9 @@ jobs:
             --query version \
             --output tsv)
 
-          echo "Registered model version: $MODEL_VERSION"
           echo "model_version=$MODEL_VERSION" >> $GITHUB_OUTPUT
 
-  deploy-test:
+  deploy-test-batch:
     needs: register-model
     runs-on: ubuntu-latest
     environment: test
@@ -135,46 +133,56 @@ jobs:
       - name: Install Azure ML Extension
         run: |
           az extension add -n ml --yes
+          az extension update -n ml
           az configure --defaults group=$RESOURCE_GROUP workspace=$WORKSPACE_NAME
 
-      - name: Create Test Endpoint If Not Exists
+      - name: Create Test Batch Endpoint If Not Exists
         run: |
-          az ml online-endpoint show --name $TEST_ENDPOINT || \
-          az ml online-endpoint create \
-            --name $TEST_ENDPOINT \
-            --auth-mode key
+          az ml batch-endpoint show --name $TEST_BATCH_ENDPOINT || \
+          az ml batch-endpoint create \
+            --name $TEST_BATCH_ENDPOINT
 
-      - name: Deploy Model to Test
+      - name: Create Test Batch Deployment
         run: |
-          az ml online-deployment create \
-            --name $TEST_DEPLOYMENT \
-            --endpoint-name $TEST_ENDPOINT \
+          az ml batch-deployment create \
+            --name $TEST_BATCH_DEPLOYMENT \
+            --endpoint-name $TEST_BATCH_ENDPOINT \
             --model azureml:$MODEL_NAME:${{ needs.register-model.outputs.model_version }} \
-            --instance-type $INSTANCE_TYPE \
-            --instance-count $INSTANCE_COUNT \
-            --code-configuration code=src/azuremlapp/utils,scoring_script=score.py \
+            --compute azureml:$COMPUTE_NAME \
+            --code-path src/azuremlapp/utils \
+            --scoring-script batch_score.py \
             --environment azureml:AzureML-sklearn-1.0-ubuntu20.04-py38-cpu@latest \
-            --all-traffic
+            --instance-count 1 \
+            --mini-batch-size 1 \
+            --max-concurrency-per-instance 1 \
+            --set-default
 
-      - name: Test Endpoint Smoke Test
+      - name: Create Test Input CSV
         run: |
-          cat > sample-request.json <<EOF
-          {
-            "input_data": {
-              "columns": ["age", "income", "credit_score"],
-              "data": [[35, 600000, 650]]
-            }
-          }
+          mkdir -p batch-input
+          cat > batch-input/loan_input.csv <<EOF
+          age,income,credit_score
+          35,600000,650
+          42,800000,720
           EOF
 
-          az ml online-endpoint invoke \
-            --name $TEST_ENDPOINT \
-            --request-file sample-request.json
+      - name: Upload Test Input Data
+        run: |
+          az ml data create \
+            --name loan-test-batch-input \
+            --type uri_folder \
+            --path batch-input/
 
-  deploy-production:
+      - name: Invoke Test Batch Endpoint
+        run: |
+          az ml batch-endpoint invoke \
+            --name $TEST_BATCH_ENDPOINT \
+            --input azureml:loan-test-batch-input@latest
+
+  deploy-production-batch:
     needs:
       - register-model
-      - deploy-test
+      - deploy-test-batch
     runs-on: ubuntu-latest
     environment: production
 
@@ -190,52 +198,58 @@ jobs:
       - name: Install Azure ML Extension
         run: |
           az extension add -n ml --yes
+          az extension update -n ml
           az configure --defaults group=$RESOURCE_GROUP workspace=$WORKSPACE_NAME
 
-      - name: Create Production Endpoint If Not Exists
+      - name: Create Production Batch Endpoint If Not Exists
         run: |
-          az ml online-endpoint show --name $PROD_ENDPOINT || \
-          az ml online-endpoint create \
-            --name $PROD_ENDPOINT \
-            --auth-mode key
+          az ml batch-endpoint show --name $PROD_BATCH_ENDPOINT || \
+          az ml batch-endpoint create \
+            --name $PROD_BATCH_ENDPOINT
 
-      - name: Deploy Model to Production
+      - name: Create Production Batch Deployment
         run: |
-          az ml online-deployment create \
-            --name $PROD_DEPLOYMENT \
-            --endpoint-name $PROD_ENDPOINT \
+          az ml batch-deployment create \
+            --name $PROD_BATCH_DEPLOYMENT \
+            --endpoint-name $PROD_BATCH_ENDPOINT \
             --model azureml:$MODEL_NAME:${{ needs.register-model.outputs.model_version }} \
-            --instance-type $INSTANCE_TYPE \
-            --instance-count $INSTANCE_COUNT \
-            --code-configuration code=src/azuremlapp/utils,scoring_script=score.py \
+            --compute azureml:$COMPUTE_NAME \
+            --code-path src/azuremlapp/utils \
+            --scoring-script batch_score.py \
             --environment azureml:AzureML-sklearn-1.0-ubuntu20.04-py38-cpu@latest \
-            --all-traffic
+            --instance-count 1 \
+            --mini-batch-size 1 \
+            --max-concurrency-per-instance 1 \
+            --set-default
 
-      - name: Production Smoke Test
+      - name: Create Production Input CSV
         run: |
-          cat > sample-request.json <<EOF
-          {
-            "input_data": {
-              "columns": ["age", "income", "credit_score"],
-              "data": [[42, 800000, 720]]
-            }
-          }
+          mkdir -p batch-prod-input
+          cat > batch-prod-input/loan_input.csv <<EOF
+          age,income,credit_score
+          45,900000,750
+          29,450000,610
           EOF
 
-          az ml online-endpoint invoke \
-            --name $PROD_ENDPOINT \
-            --request-file sample-request.json
-
-      - name: Show Production Endpoint
+      - name: Upload Production Input Data
         run: |
-          az ml online-endpoint show --name $PROD_ENDPOINT --output table
+          az ml data create \
+            --name loan-prod-batch-input \
+            --type uri_folder \
+            --path batch-prod-input/
+
+      - name: Invoke Production Batch Endpoint
+        run: |
+          az ml batch-endpoint invoke \
+            --name $PROD_BATCH_ENDPOINT \
+            --input azureml:loan-prod-batch-input@latest
 
   monitor-model:
-    needs: deploy-production
+    needs: deploy-production-batch
     runs-on: ubuntu-latest
 
     steps:
       - name: Monitoring Placeholder
         run: |
-          echo "Production deployment completed"
-          echo "Monitor endpoint logs, latency, errors, data drift, and model quality"
+          echo "Batch endpoint deployment completed"
+          echo "Check batch job status, output predictions, failures, and logs"
