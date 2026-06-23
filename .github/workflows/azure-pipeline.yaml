@@ -9,7 +9,7 @@ on:
 env:
   RESOURCE_GROUP: training_group
   WORKSPACE_NAME: training-ws
-  MODEL_NAME: loan-approval-model
+  MODEL_NAME: loan-approval-modelv1
 
 jobs:
   train-model:

@@ -62,11 +62,48 @@ az provider register --namespace Microsoft.Cdn
 az provider list  --query "[?namespace=='Microsoft.MachineLearningServices' || namespace=='Microsoft.Network' || namespace=='Microsoft.ContainerRegistry' || namespace=='Microsoft.Storage' || namespace=='Microsoft.KeyVault' || namespace=='Microsoft.Insights' || namespace=='Microsoft.ManagedIdentity' || namespace=='Microsoft.Authorization'].{Namespace:namespace, State:registrationState}" --output table
 
 #run scope.py
-az ml online-endpoint create --file endpoint.yml --resource-group training_group --workspace-name training-ws
+#az ml online-endpoint create --file endpoint.yml --resource-group training_group --workspace-name #training-ws
+#add learning instance
+az k8s-extension create ^
+  --name azureml-extension ^
+  --extension-type Microsoft.AzureML.Kubernetes ^
+  --cluster-type managedClusters ^
+  --cluster-name loan-aks ^
+  --resource-group loan-aks_group ^
+  --scope cluster ^
+  --release-train stable
 
+#aks end point
+az aks show   --name loan-aks   --resource-group loan-aks_group   --query id -o tsv
+az k8s-extension create ^  --name azureml-extension ^  --extension-type Microsoft.AzureML.Kubernetes ^  --cluster-type managedClusters ^  --cluster-name loan-aks ^  --resource-group loan-aks_group ^  --scope cluster ^  --release-train stable ^  --configuration-settings enableInference=true allowInsecureConnections=true inferenceRouterServiceType=LoadBalancer
+az k8s-extension show ^
+  --name azureml-extension ^
+  --cluster-name loan-aks ^
+  --resource-group loan-aks_group ^
+  --cluster-type managedClusters ^
+  --query provisioningState
+#attach aks to ml
+az ml compute attach ^  --type kubernetes ^  --name loanaksv2 ^  --resource-group training_group ^  --workspace-name training-ws ^  --resource-id "/subscriptions/7d267e35-6fb2-4a8d-b9ce-c127545512c8/resourceGroups/loan-aks_group/providers/Microsoft.ContainerService/managedClusters/loan-aks"
 
+az ml compute show ^  --name loanaksv2 ^  --resource-group training_group ^  --workspace-name training-ws
 
+az ml batch-endpoint create \
+  --name loanbatch01 \
+  --resource-group training_group \
+  --workspace-name training-ws
 
+az ml batch-deployment create ^  --file batch-deployment.yml ^  --resource-group training_group ^  --workspace-name training-ws
+
+az ml batch-endpoint update ^
+  --name loanbatch01 ^
+  --resource-group training_group ^
+  --workspace-name training-ws ^
+  --set defaults.deploymentName=blue
+
+az ml batch-endpoint show ^
+  --name loanbatch01 ^
+  --resource-group training_group ^
+  --workspace-name training-ws
 
 #github azure credentials
 az ad sp create-for-rbac  --name github-actions-sp --role Contributor 

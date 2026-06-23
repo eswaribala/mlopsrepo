@@ -1,5 +1,4 @@
-$schema: https://azuremlschemas.azureedge.net/latest/managedOnlineEndpoint.schema.json
-name: loan-endpoint-v7
+$schema: https://azuremlschemas.azureedge.net/latest/kubernetesOnlineEndpoint.schema.json
+name: loan-k8s-endpoint-v2
 auth_mode: key
-tags:
-  purpose: demo
+compute: azureml:loanaksv2
