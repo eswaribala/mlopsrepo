@@ -166,11 +166,11 @@ jobs:
 
       - name: Set Default Batch Deployment
         run: |
-          az ml batch-endpoint update \
-            --name $TEST_BATCH_ENDPOINT \
-            --defaults deployment_name=$TEST_BATCH_DEPLOYMENT \
-            --resource-group $RESOURCE_GROUP \
-            --workspace-name $WORKSPACE_NAME
+            az ml batch-endpoint update \
+              --name $TEST_BATCH_ENDPOINT \
+              --set defaults.deployment_name=$TEST_BATCH_DEPLOYMENT \
+              --resource-group $RESOURCE_GROUP \
+              --workspace-name $WORKSPACE_NAME
 
       - name: Create Batch Input CSV
         run: |
