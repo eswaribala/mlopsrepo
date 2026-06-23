@@ -92,6 +92,11 @@ az ml batch-endpoint create \
   --resource-group training_group \
   --workspace-name training-ws
 
+az ml batch-endpoint show ^
+  --name loanbatch01 ^
+  --resource-group training_group ^
+  --workspace-name training-ws
+
 az ml batch-deployment create ^  --file batch-deployment.yml ^  --resource-group training_group ^  --workspace-name training-ws
 
 az ml batch-endpoint update ^
@@ -99,11 +104,34 @@ az ml batch-endpoint update ^
   --resource-group training_group ^
   --workspace-name training-ws ^
   --set defaults.deploymentName=blue
-
 az ml batch-endpoint show ^
   --name loanbatch01 ^
   --resource-group training_group ^
   --workspace-name training-ws
+
+az ml data create ^
+  --name loan-batch-input ^
+  --version 1 ^
+  --type uri_folder ^
+  --path ./batch_input ^
+  --resource-group training_group ^
+  --workspace-name training-ws 
+
+az ml batch-endpoint invoke ^
+  --name loanbatch01 ^
+  --deployment-name blue ^
+  --input "azureml:loan-batch-input:1" ^
+  --resource-group training_group ^
+  --workspace-name training-ws
+
+az ml job list ^
+  --resource-group training_group ^
+  --workspace-name training-ws ^
+  --output table
+
+az ml job show ^  --name batchjob-b2a1604c-0244-470d-9281-b5467fcccda5 ^  --resource-group training_group ^  --workspace-name training-ws ^  --query status
+
+az ml job download ^  --name batchjob-b2a1604c-0244-470d-9281-b5467fcccda5 ^  --resource-group training_group ^  --workspace-name training-ws ^  --download-path batch_output
 
 #github azure credentials
 az ad sp create-for-rbac  --name github-actions-sp --role Contributor 

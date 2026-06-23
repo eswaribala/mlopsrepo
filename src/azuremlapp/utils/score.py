@@ -1,21 +1,30 @@
 import json
 import os
 import joblib
-
+import glob
+import pandas as pd
 def init():
     global model
-    model_path = os.path.join(os.getenv("AZUREML_MODEL_DIR"), "loan_model.pkl")
-    model = joblib.load(model_path)
+    model_dir = os.getenv("AZUREML_MODEL_DIR")
+    model_files = glob.glob( os.path.join(model_dir, "**", "*.pkl"), recursive=True ) 
+    if not model_files: 
+        raise FileNotFoundError("No .pkl model found in AZUREML_MODEL_DIR")
+    model = joblib.load(model_files[0]) 
+    print(f"Loaded model: {model_files[0]}")
 
-def run(raw_data):
-    data = json.loads(raw_data)
+def run(mini_batch):
+    results = []
 
-    prediction = model.predict([[
-        data["age"],
-        data["income"],
-        data["credit_score"]
-    ]])
+    for file_path in mini_batch:
+        df = pd.read_csv(file_path)
 
-    return {
-        "approved": int(prediction[0])
-    }
+        X = df[["age", "income", "credit_score"]]
+
+        predictions = model.predict(X)
+
+        for pred in predictions:
+            results.append(
+                {"approved": int(pred)}
+            )
+
+    return results
